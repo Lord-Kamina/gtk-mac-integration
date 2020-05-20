@@ -570,6 +570,7 @@ enum
   BlockTermination,
   WillTerminate,
   OpenFile,
+  OpenURL,
   LastSignal
 };
 
@@ -711,6 +712,25 @@ gtkosx_application_class_init (GtkosxApplicationClass *klass)
                   0, NULL, NULL,
                   g_cclosure_marshal_BOOLEAN__STRING,
                   G_TYPE_BOOLEAN, 1, G_TYPE_STRING);
+
+  /**
+   * GtkosxApplication::NSApplicationOpenURL:
+   * @app: The application object
+   * @path: A UTF8-encoded URL.
+   * @user_data: Data attached at connection
+   *
+   * Emitted when a OpenURL event is
+   * received from the operating system.
+   *
+   * Returns: Boolean indicating success at opening the file.
+   */
+  gtkosx_application_signals[OpenURL] =
+    g_signal_new ("NSApplicationOpenURLs",
+                  GTKOSX_TYPE_APPLICATION,
+                  G_SIGNAL_NO_RECURSE | G_SIGNAL_ACTION,
+                  0, NULL, NULL,
+                  g_cclosure_marshal_BOOLEAN__STRING,
+                  G_TYPE_NONE, 1, G_TYPE_STRING);
 
 }
 

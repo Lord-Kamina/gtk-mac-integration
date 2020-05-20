@@ -11,7 +11,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -25,25 +25,39 @@
 #include "gtkosxapplication.h"
 
 static gchar *utf8_path = NULL;
+static gchar *utf8_url = NULL;
 
 @implementation GtkApplicationDelegate
 
 -(void) applicationDidFinishLaunching: (NSNotification*)aNotification
 {
-  if (utf8_path != NULL)
+  if (utf8_path != NULL || utf8_url != NULL)
+  {
+    GtkosxApplication *app = g_object_new (GTKOSX_TYPE_APPLICATION, NULL);
+    guint sigOpenFile = g_signal_lookup ("NSApplicationOpenFile",
+                        GTKOSX_TYPE_APPLICATION);
+    guint sigOpenURL = g_signal_lookup ("NSApplicationOpenURLs",
+                        GTKOSX_TYPE_APPLICATION);
+    gboolean result = FALSE;
+    if (utf8_path != NULL)
     {
-      GtkosxApplication *app = g_object_new (GTKOSX_TYPE_APPLICATION, NULL);
-      guint sig = g_signal_lookup ("NSApplicationOpenFile",
-				   GTKOSX_TYPE_APPLICATION);
-      gboolean result = FALSE;
-      if (sig)
-        {
-          g_signal_emit (app, sig, 0, utf8_path, &result);
-          g_free(utf8_path);
-          utf8_path = NULL;
-        }
-      g_object_unref (app);
+      if (sigOpenFile && utf8_path != NULL)
+      {
+        g_signal_emit (app, sigOpenFile, 0, utf8_path, &result);
+        g_free(utf8_path);
+        utf8_path = NULL;
+      }
     }
+    else if (utf8_url != NULL)
+    {
+      if (sigOpenURL && utf8_url != NULL)
+      {
+        g_signal_emit (app, sigOpenURL, 0, utf8_url);
+        g_free(utf8_url);
+        utf8_url = NULL;
+      }
+    }
+  }
 }
 
 -(BOOL) application: (NSApplication*)theApplication openFile: (NSString*) file
@@ -51,7 +65,7 @@ static gchar *utf8_path = NULL;
   utf8_path =  g_strdup([file UTF8String]);
   GtkosxApplication *app = g_object_new (GTKOSX_TYPE_APPLICATION, NULL);
   guint sig = g_signal_lookup ("NSApplicationOpenFile",
-			       GTKOSX_TYPE_APPLICATION);
+                   GTKOSX_TYPE_APPLICATION);
   gboolean result = FALSE;
   if (sig)
     {
@@ -63,6 +77,25 @@ static gchar *utf8_path = NULL;
   return result;
 }
 
+-(void) application: (NSApplication*)theApplication openURLs: (NSArray<NSURL *> *) urls
+{
+  if ([urls count] >= 1)
+  {
+    NSURL* url = [urls objectAtIndex:0];
+    utf8_url =  g_strdup([[url absoluteString] UTF8String]);
+    GtkosxApplication *app = g_object_new (GTKOSX_TYPE_APPLICATION, NULL);
+    guint sig = g_signal_lookup ("NSApplicationOpenURLs",
+                   GTKOSX_TYPE_APPLICATION);
+    gboolean result = FALSE;
+    if (sig)
+    {
+      g_signal_emit (app, sig, 0, utf8_url);
+      g_free(utf8_url);
+      utf8_url = NULL;
+    }
+    g_object_unref (app);
+  }
+}
 
 -(NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication *)sender
 {
